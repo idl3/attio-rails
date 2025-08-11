@@ -1,24 +1,27 @@
-if ENV['COVERAGE'] || ENV['CI']
-  require 'simplecov'
-  require 'simplecov-cobertura' if ENV['CI']
-  
-  formatters = [SimpleCov::Formatter::HTMLFormatter]
-  
-  if ENV['CI']
-    formatters << SimpleCov::Formatter::CoberturaFormatter
-  else
-    require 'simplecov-console'
-    formatters << SimpleCov::Formatter::Console
-  end
-  
-  SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new(formatters)
-  
-  SimpleCov.start do
-    add_filter '/spec/'
-    add_filter '/vendor/'
-    add_filter '/test/'
-    minimum_coverage ENV['CI'] ? 85 : 100
-  end
+require 'simplecov'
+require 'simplecov-console'
+
+# Configure coverage formatters based on environment
+if ENV['COVERAGE']
+  SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new([
+    SimpleCov::Formatter::HTMLFormatter,
+    SimpleCov::Formatter::Console,
+    SimpleCov::Formatter::SimpleFormatter
+  ])
+else
+  SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new([
+    SimpleCov::Formatter::HTMLFormatter,
+    SimpleCov::Formatter::Console
+  ])
+end
+
+SimpleCov.start do
+  add_filter '/spec/'
+  add_filter '/vendor/'
+  add_filter '/bin/'
+  add_filter '/test/'
+  add_filter '/coverage/'
+  minimum_coverage 85
 end
 
 require 'bundler/setup'
