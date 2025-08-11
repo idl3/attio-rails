@@ -1,0 +1,14 @@
+--output-dir docs/yard
+--markup markdown
+--markup-provider redcarpet
+--charset utf-8
+--no-private
+--embed-mixins
+--readme README.md
+--title "Attio Rails Integration Documentation"
+--main README.md
+--files CHANGELOG.md,CONTRIBUTING.md
+lib/**/*.rb
+-
+CHANGELOG.md
+CONTRIBUTING.md
