@@ -30,7 +30,7 @@ jobs:
         mkdir -p ~/.gem
         cat > ~/.gem/credentials << EOF
         ---
-        :rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}
+        :rubygems_api_key: ${{ secrets.RUBYGEMS_AUTH_TOKEN }}
         EOF
         chmod 0600 ~/.gem/credentials
 
@@ -57,3 +57,4 @@ jobs:
         prerelease: ${{ contains(github.ref_name, 'pre') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
