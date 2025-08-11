@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 require "attio"
 require "rails"
 require "active_support"
+require "logger"
 
 require "attio/rails/version"
 require "attio/rails/configuration"
