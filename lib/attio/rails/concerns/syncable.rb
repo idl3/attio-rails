@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Attio
   module Rails
     module Concerns
@@ -5,7 +7,7 @@ module Attio
         extend ActiveSupport::Concern
 
         included do
-          after_commit :sync_to_attio, on: [:create, :update], if: :should_sync_to_attio?
+          after_commit :sync_to_attio, on: %i[create update], if: :should_sync_to_attio?
           after_commit :remove_from_attio, on: :destroy, if: :should_remove_from_attio?
 
           class_attribute :attio_object_type
@@ -18,7 +20,7 @@ module Attio
           def syncs_with_attio(object_type, mapping = {}, options = {})
             self.attio_object_type = object_type
             self.attio_attribute_mapping = mapping
-            self.attio_sync_conditions = options[:if] || -> { true }
+            self.attio_sync_conditions = options[:if]
             self.attio_identifier_attribute = options[:identifier] || :id
           end
 
@@ -46,7 +48,7 @@ module Attio
         def sync_to_attio_now
           client = Attio::Rails.client
           attributes = attio_attributes
-          
+
           if attio_record_id.present?
             client.records.update(
               object: attio_object_type,
@@ -58,7 +60,7 @@ module Attio
               object: attio_object_type,
               data: { values: attributes }
             )
-            update_column(:attio_record_id, response['data']['id']) if respond_to?(:attio_record_id=)
+            update_column(:attio_record_id, response["data"]["id"]) if respond_to?(:attio_record_id=)
           end
         end
 
@@ -80,7 +82,7 @@ module Attio
 
         def remove_from_attio_now
           return unless attio_record_id.present?
-          
+
           client = Attio::Rails.client
           client.records.delete(
             object: attio_object_type,
@@ -92,23 +94,19 @@ module Attio
           return {} unless attio_attribute_mapping
 
           attio_attribute_mapping.each_with_object({}) do |(attio_key, local_key), hash|
-            value = case local_key
-                    when Proc
-                      local_key.call(self)
-                    when Symbol, String
-                      send(local_key)
-                    else
-                      local_key
-                    end
+            value = attribute_value_for(local_key)
             hash[attio_key] = value unless value.nil?
           end
         end
 
         def should_sync_to_attio?
           return false unless Attio::Rails.sync_enabled?
-          return false unless attio_object_type.present? && attio_attribute_mapping.present?
-          
+          return false unless attio_object_type.present?
+          return false unless attio_attribute_mapping.present?
+
           condition = attio_sync_conditions
+          return true if condition.nil?
+
           case condition
           when Proc
             instance_exec(&condition)
@@ -125,6 +123,19 @@ module Attio
 
         def attio_identifier
           send(attio_identifier_attribute)
+        end
+
+        private def attribute_value_for(local_key)
+          case local_key
+          when Proc
+            local_key.call(self)
+          when Symbol
+            send(local_key)
+          when String
+            respond_to?(local_key) ? send(local_key) : local_key
+          else
+            local_key
+          end
         end
       end
     end
