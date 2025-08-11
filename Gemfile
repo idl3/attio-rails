@@ -7,7 +7,7 @@ gem "rake", "~> 13.0"
 
 group :development, :test do
   gem "rspec", "~> 3.12"
-  gem "rspec-rails", "~> 6.0"
+  gem "rspec-rails", "~> 8.0"
   gem "rails", "~> 7.0"
   gem "sqlite3", "~> 1.4"
   gem "simplecov", "~> 0.22"
