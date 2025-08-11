@@ -1,12 +1,18 @@
+# frozen_string_literal: true
+
 module Attio
   module Rails
     class Configuration
       attr_accessor :api_key, :default_workspace_id, :logger, :sync_enabled, :background_sync
 
       def initialize
-        @api_key = ENV['ATTIO_API_KEY']
+        @api_key = ENV.fetch("ATTIO_API_KEY", nil)
         @default_workspace_id = nil
-        @logger = defined?(::Rails) ? ::Rails.logger : Logger.new(STDOUT)
+        @logger = if defined?(::Rails) && ::Rails.respond_to?(:logger) && ::Rails.logger
+                    ::Rails.logger
+                  else
+                    ::Logger.new($stdout)
+                  end
         @sync_enabled = true
         @background_sync = true
       end
@@ -30,6 +36,7 @@ module Attio
 
       def client
         raise ConfigurationError, "Attio API key not configured" unless configuration.valid?
+
         @client ||= ::Attio.client(api_key: configuration.api_key)
       end
 
