@@ -9,7 +9,7 @@ group :development, :test do
   gem "rspec", "~> 3.12"
   gem "rspec-rails", "~> 6.0"
   gem "rails", "~> 7.0"
-  gem "sqlite3", "~> 1.4"
+  gem "sqlite3", "~> 2.7"
   gem "simplecov", "~> 0.22"
   gem "simplecov-console", "~> 0.9"
   gem "rubocop", "~> 1.50"
