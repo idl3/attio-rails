@@ -12,7 +12,7 @@ class AttioSyncJob < ApplicationJob
   queue_as :low
   
   retry_on Attio::RateLimitError, wait: 1.minute, attempts: 3
-  retry_on Attio::ServerError, wait: :exponentially_longer, attempts: 5
+  retry_on Attio::ServerError, wait: :polynomially_longer, attempts: 5
   discard_on ActiveJob::DeserializationError
 
   def perform(model_name:, model_id:, action:, attio_record_id: nil)

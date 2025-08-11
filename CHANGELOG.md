@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-01-11
+
+### Added
+- Support for Ruby 3.4
+- Support for Rails 8.0
+- Missing test dependencies (webmock, pry, sqlite3)
+
+### Fixed
+- Fixed namespace loading issue with Concerns::Syncable module
+- Fixed ActiveJob deprecation warning (exponentially_longer -> polynomially_longer)
+- Fixed gem installation issues in CI
+
+### Changed
+- Updated RSpec to 3.13 for compatibility
+- Improved CI workflow to test against Ruby 3.4 and Rails 8.0
+
 ## [0.1.0] - 2025-01-11
 
 ### Added

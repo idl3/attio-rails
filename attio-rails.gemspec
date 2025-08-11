@@ -29,14 +29,17 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "attio", "~> 0.1", ">= 0.1.1"
-  spec.add_dependency "rails", ">= 6.1", "< 8.0"
+  spec.add_dependency "rails", ">= 6.1", "< 9.0"
 
   spec.add_development_dependency "yard", "~> 0.9"
   spec.add_development_dependency "redcarpet", "~> 3.5"
-  spec.add_development_dependency "rspec", "~> 3.12"
+  spec.add_development_dependency "rspec", "~> 3.13"
   spec.add_development_dependency "rubocop", "~> 1.50"
   spec.add_development_dependency "simplecov", "~> 0.22"
   spec.add_development_dependency "simplecov-console", "~> 0.9"
+  spec.add_development_dependency "webmock", "~> 3.19"
+  spec.add_development_dependency "pry", "~> 0.14"
+  spec.add_development_dependency "sqlite3", "~> 1.4"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "bundler-audit", "~> 0.9"
   spec.add_development_dependency "danger", "~> 9.4"
