@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "bundler/gem_tasks"
 require "rspec/core/rake_task"
 require "rubocop/rake_task"
@@ -7,9 +9,9 @@ RSpec::Core::RakeTask.new(:spec)
 RuboCop::RakeTask.new
 
 YARD::Rake::YardocTask.new do |t|
-  t.files   = ['lib/**/*.rb']
-  t.options = ['--markup-provider=redcarpet', '--markup=markdown', '--protected', '--private']
-  t.stats_options = ['--list-undoc']
+  t.files   = ["lib/**/*.rb"]
+  t.options = ["--markup-provider=redcarpet", "--markup=markdown", "--protected", "--private"]
+  t.stats_options = ["--list-undoc"]
 end
 
 namespace :yard do
@@ -17,13 +19,13 @@ namespace :yard do
   task :server do
     sh "bundle exec yard server --reload"
   end
-  
+
   desc "Generate documentation for GitHub Pages"
   task :gh_pages do
     sh "bundle exec yard --output-dir docs"
     # Create .nojekyll file for GitHub Pages
-    File.open("docs/.nojekyll", "w") {}
+    File.write("docs/.nojekyll", "")
   end
 end
 
-task :default => [:spec, :rubocop]
+task default: %i[spec rubocop]
