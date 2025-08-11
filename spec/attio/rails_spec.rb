@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 RSpec.describe Attio::Rails do
   it "has a version number" do
     expect(Attio::Rails::VERSION).not_to be nil
@@ -23,10 +25,10 @@ RSpec.describe Attio::Rails do
     it "resets the client after configuration" do
       described_class.configure { |c| c.api_key = "old_key" }
       client1 = described_class.client
-      
+
       described_class.configure { |c| c.api_key = "new_key" }
       client2 = described_class.client
-      
+
       expect(client1).not_to be(client2)
     end
   end
@@ -54,7 +56,9 @@ RSpec.describe Attio::Rails do
       end
 
       it "raises a configuration error" do
-        expect { described_class.client }.to raise_error(Attio::Rails::ConfigurationError, "Attio API key not configured")
+        expect do
+          described_class.client
+        end.to raise_error(Attio::Rails::ConfigurationError, "Attio API key not configured")
       end
     end
   end
@@ -65,13 +69,15 @@ RSpec.describe Attio::Rails do
       client1 = described_class.client
       described_class.reset_client!
       client2 = described_class.client
-      
+
       expect(client1).not_to be(client2)
     end
   end
 
   describe ".sync_enabled?" do
     it "returns true by default" do
+      # Ensure we have a fresh configuration
+      described_class.configuration = nil
       expect(described_class.sync_enabled?).to be true
     end
 
@@ -83,6 +89,8 @@ RSpec.describe Attio::Rails do
 
   describe ".background_sync?" do
     it "returns true by default" do
+      # Ensure we have a fresh configuration
+      described_class.configuration = nil
       expect(described_class.background_sync?).to be true
     end
 

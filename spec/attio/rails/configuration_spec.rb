@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 RSpec.describe Attio::Rails::Configuration do
   let(:configuration) { described_class.new }
 
   describe "#initialize" do
     it "sets api_key from environment variable" do
-      allow(ENV).to receive(:[]).with('ATTIO_API_KEY').and_return('env_key')
+      allow(ENV).to receive(:fetch).with("ATTIO_API_KEY", nil).and_return("env_key")
       config = described_class.new
-      expect(config.api_key).to eq('env_key')
+      expect(config.api_key).to eq("env_key")
     end
 
     it "sets default_workspace_id to nil" do
@@ -26,7 +28,7 @@ RSpec.describe Attio::Rails::Configuration do
 
     context "when Rails is defined" do
       let(:rails_logger) { instance_double(Logger) }
-      
+
       before do
         stub_const("Rails", double(logger: rails_logger))
       end
