@@ -30,6 +30,6 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "attio", "~> 0.1", ">= 0.1.2"
+  spec.add_dependency "attio", "~> 0.1", ">= 0.1.1"
   spec.add_dependency "rails", ">= 6.1", "< 9.0"
 end
