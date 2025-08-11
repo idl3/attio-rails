@@ -1,8 +1,10 @@
 # Attio Rails
 
+[![CI](https://github.com/idl3/attio-rails/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/idl3/attio-rails/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/idl3/attio-rails/branch/master/graph/badge.svg)](https://codecov.io/gh/idl3/attio-rails)
 [![Documentation](https://img.shields.io/badge/docs-yard-blue.svg)](https://idl3.github.io/attio-rails)
 [![Gem Version](https://badge.fury.io/rb/attio-rails.svg)](https://badge.fury.io/rb/attio-rails)
-[![CI](https://github.com/idl3/attio-rails/actions/workflows/ci.yml/badge.svg)](https://github.com/idl3/attio-rails/actions/workflows/ci.yml)
+[![Ruby Style Guide](https://img.shields.io/badge/code_style-rubocop-brightgreen.svg)](https://github.com/rubocop/rubocop)
 
 Rails integration for the [Attio](https://github.com/idl3/attio) Ruby client. This gem provides Rails-specific features including ActiveRecord model synchronization, generators, and background job integration.
 

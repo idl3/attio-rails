@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   test:
@@ -32,16 +32,33 @@ jobs:
         gem install rails -v "~> ${{ matrix.rails-version }}.0"
         bundle update rails
     
-    - name: Run tests
-      run: bundle exec rspec
+    - name: Create coverage directory
+      run: mkdir -p coverage
     
-    - name: Upload coverage reports
+    - name: Run RSpec tests
+      run: |
+        bundle exec rspec --format documentation --format RspecJunitFormatter --out rspec.xml || bundle exec rspec --format documentation
+      env:
+        COVERAGE: true
+        RAILS_ENV: test
+    
+    - name: Upload coverage to Codecov
       if: matrix.ruby-version == '3.2' && matrix.rails-version == '7.1'
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
-        file: ./coverage/coverage.xml
+        files: ./coverage/coverage.xml,./coverage/.resultset.json
         flags: unittests
         name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rspec-results-${{ matrix.ruby-version }}-rails-${{ matrix.rails-version }}
+        path: |
+          rspec.xml
+          coverage/
 
   lint:
     runs-on: ubuntu-latest
