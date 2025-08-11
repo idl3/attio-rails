@@ -17,7 +17,7 @@ group :development, :test do
   gem "rspec-rails", "~> 6.0"
   gem "rubocop", "~> 1.50"
   gem "rubocop-rails", "~> 2.19"
-  gem "rubocop-rspec", "~> 2.19"
+  gem "rubocop-rspec", "~> 3.6"
   gem "simplecov", "~> 0.22"
   gem "simplecov-console", "~> 0.9"
   gem "sqlite3", "~> 1.4"
