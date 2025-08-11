@@ -17,7 +17,9 @@ module Attio
 
           failure_message do |actual|
             if actual.class.respond_to?(:attio_object_type)
-              "expected #{actual.class} to sync to Attio object '#{expected[:object] || expected[:object_type]}' but syncs to '#{actual.class.attio_object_type}'"
+              expected_obj = expected[:object] || expected[:object_type]
+              actual_obj = actual.class.attio_object_type
+              "expected #{actual.class} to sync to Attio object '#{expected_obj}' but syncs to '#{actual_obj}'"
             else
               "expected #{actual.class} to include Attio::Rails::Concerns::Syncable"
             end
@@ -52,9 +54,12 @@ module Attio
             if actual.class.respond_to?(:attio_attribute_mapping)
               mapping = actual.class.attio_attribute_mapping
               if @mapped_to
-                "expected #{actual.class} to map Attio attribute '#{attio_attr}' to '#{@mapped_to}' but it maps to '#{mapping[attio_attr]}'"
+                actual_mapping = mapping[attio_attr]
+                "expected #{actual.class} to map Attio attribute '#{attio_attr}' to '#{@mapped_to}' " \
+                  "but it maps to '#{actual_mapping}'"
               else
-                "expected #{actual.class} to have Attio attribute '#{attio_attr}' but has #{mapping.keys.join(', ')}"
+                available_attrs = mapping.keys.join(", ")
+                "expected #{actual.class} to have Attio attribute '#{attio_attr}' but has #{available_attrs}"
               end
             else
               "expected #{actual.class} to include Attio::Rails::Concerns::Syncable"
@@ -70,14 +75,13 @@ module Attio
           end
         end
 
-        ::RSpec::Matchers.define :enqueue_attio_sync_job do
+        ::RSpec::Matchers.define :enqueue_attio_sync_job do # rubocop:disable Metrics/BlockLength
           supports_block_expectations
 
           match do |block|
             initial_jobs = attio_sync_jobs.dup
             block.call
             new_jobs = attio_sync_jobs - initial_jobs
-
             @actual_count = new_jobs.size
 
             if @expected_count
@@ -98,6 +102,18 @@ module Attio
           end
 
           failure_message do
+            build_failure_message
+          end
+
+          failure_message_when_negated do
+            "expected not to enqueue AttioSyncJob but #{@actual_count} were enqueued"
+          end
+
+          description do
+            build_description
+          end
+
+          private def build_failure_message
             if @expected_count
               "expected to enqueue #{@expected_count} AttioSyncJob(s) but enqueued #{@actual_count}"
             elsif @expected_action
@@ -107,11 +123,7 @@ module Attio
             end
           end
 
-          failure_message_when_negated do
-            "expected not to enqueue AttioSyncJob but #{@actual_count} were enqueued"
-          end
-
-          description do
+          private def build_description
             if @expected_count
               "enqueue #{@expected_count} AttioSyncJob(s)"
             elsif @expected_action
