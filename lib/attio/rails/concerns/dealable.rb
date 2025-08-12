@@ -11,18 +11,28 @@ module Attio
           after_commit :remove_deal_from_attio, on: :destroy, if: :should_remove_deal?
 
           class_attribute :attio_deal_configuration, instance_writer: false, default: nil
-          class_attribute :attio_pipeline_id, instance_writer: false, default: nil
+          class_attribute :_attio_pipeline_id, instance_writer: false, default: nil
           class_attribute :attio_stage_field, instance_writer: false, default: nil
           class_attribute :attio_value_field, instance_writer: false, default: nil
           class_attribute :attio_deal_callbacks, instance_writer: false, default: {}
+          class_attribute :_track_won_deals, instance_writer: false, default: false
+          class_attribute :_track_lost_deals, instance_writer: false, default: false
         end
 
         class_methods do
+          def attio_pipeline_id(value = nil)
+            if value
+              self._attio_pipeline_id = value
+            else
+              _attio_pipeline_id
+            end
+          end
+
           def attio_deal_config(pipeline_id: nil, &block)
             if block_given? || pipeline_id
               self.attio_deal_configuration = DealConfig.new(self)
               attio_deal_configuration.instance_eval(&block) if block_given?
-              self.attio_pipeline_id = pipeline_id if pipeline_id
+              self.attio_pipeline_id(pipeline_id) if pipeline_id
             end
             attio_deal_configuration
           end
@@ -34,6 +44,14 @@ module Attio
               transform: :to_attio_deal,
               **options
             )
+          end
+
+          def track_won_deals
+            self._track_won_deals = true
+          end
+
+          def track_lost_deals
+            self._track_lost_deals = true
           end
         end
 
@@ -133,6 +151,8 @@ module Attio
         end
 
         def mark_as_won!(won_date: Time.current, actual_value: nil)
+          return unless self.class._track_won_deals
+
           transaction do
             update!(status: "won", closed_date: won_date)
 
@@ -152,6 +172,8 @@ module Attio
         end
 
         def mark_as_lost!(lost_reason: nil, lost_date: Time.current)
+          return unless self.class._track_lost_deals
+
           transaction do
             update!(status: "lost", closed_date: lost_date, lost_reason: lost_reason)
 
@@ -363,7 +385,7 @@ module Attio
           def pipeline_id(value = nil)
             if value
               @pipeline_id = value
-              @model_class.attio_pipeline_id = value
+              @model_class.attio_pipeline_id(value)
             else
               @pipeline_id
             end
