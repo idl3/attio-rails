@@ -40,7 +40,8 @@ RSpec.describe Attio::Rails do
       end
 
       it "returns an Attio client" do
-        expect(described_class.client).to be_a(Attio::Client)
+        client = described_class.client
+        expect(client).to(satisfy { |c| c.is_a?(Attio::Client) || c.is_a?(Attio::Rails::RateLimitedClient) })
       end
 
       it "memoizes the client" do

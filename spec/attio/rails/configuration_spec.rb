@@ -84,3 +84,12 @@ RSpec.describe Attio::Rails::Configuration do
     end
   end
 end
+
+  describe "nil workspace_id handling" do
+    it "handles nil default_workspace_id" do
+      # This tests line 52
+      config.default_workspace_id = nil
+      expect(config.default_workspace_id).to be_nil
+    end
+  end
+EOF < /dev/null

@@ -3,7 +3,9 @@
 module Attio
   module Rails
     class Configuration
-      attr_accessor :api_key, :default_workspace_id, :logger, :sync_enabled, :background_sync
+      attr_accessor :api_key, :default_workspace_id, :logger, :sync_enabled, :background_sync,
+                    :queue, :raise_on_missing_record, :max_requests_per_hour, :max_retries,
+                    :bulk_batch_size, :upsert_match_attribute, :enable_rate_limiting
 
       def initialize
         @api_key = ENV.fetch("ATTIO_API_KEY", nil)
@@ -15,6 +17,13 @@ module Attio
                   end
         @sync_enabled = true
         @background_sync = true
+        @queue = :default
+        @raise_on_missing_record = false
+        @max_requests_per_hour = 1000
+        @max_retries = 3
+        @bulk_batch_size = 100
+        @upsert_match_attribute = :email
+        @enable_rate_limiting = true
       end
 
       def valid?
@@ -37,7 +46,11 @@ module Attio
       def client
         raise ConfigurationError, "Attio API key not configured" unless configuration.valid?
 
-        @client ||= ::Attio.client(api_key: configuration.api_key)
+        @client ||= if configuration.enable_rate_limiting
+                      RateLimitedClient.new(config: configuration)
+                    else
+                      ::Attio.client(api_key: configuration.api_key)
+                    end
       end
 
       def reset_client!

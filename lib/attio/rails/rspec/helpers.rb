@@ -200,7 +200,7 @@ module Attio
         #   expect(attio_sync_jobs).to be_empty
         def clear_attio_sync_jobs
           ActiveJob::Base.queue_adapter.enqueued_jobs.delete_if do |job|
-            job[:job] == AttioSyncJob
+            [AttioSyncJob, Attio::Rails::Jobs::AttioSyncJob].include?(job[:job])
           end
         end
       end
