@@ -270,46 +270,6 @@ module Attio
         permissions[role]&.include?(permission) || false
       end
 
-      def sync_users_to_workspace(users)
-        results = { invited: [], updated: [], failed: [] }
-        existing_members = fetch_existing_members
-
-        users.each do |user|
-          email = user.email
-          if existing_members[email]
-            # Check if role needs updating
-            current_role = existing_members[email][:role]
-            new_role = determine_role_for_user(user)
-            
-            if current_role != new_role
-              result = update_member_role(member_id: existing_members[email][:id], role: new_role)
-              if result[:success]
-                results[:updated] << user
-              else
-                results[:failed] << { user: user, error: result[:error] }
-              end
-            end
-          else
-            # Invite new member
-            result = invite_member(email: email, role: determine_role_for_user(user))
-            if result[:success]
-              results[:invited] << user
-            else
-              results[:failed] << { user: user, error: result[:error] }
-            end
-          end
-        end
-
-        results
-      end
-
-      private def fetch_existing_members
-        {}
-      end
-
-      private def determine_role_for_user(user)
-        user.respond_to?(:role) ? user.role : "member"
-      end
     end
 
     class WorkspaceError < StandardError; end

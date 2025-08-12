@@ -480,26 +480,32 @@ RSpec.describe Attio::Rails::WorkspaceManager do
     end
   end
 
-  describe "sync_users_to_workspace coverage" do
-    let(:users) { [double("User", email: "test@example.com", role: "admin")] }
+  describe "additional sync_rails_users coverage" do
+    let(:users_collection) { double("collection") }
+    let(:user) { double("User", email: "test@example.com") }
     let(:existing_members) { { "test@example.com" => { id: "member-123", role: "member" } } }
     
-    it "updates existing member when role changes" do
-      allow(manager).to receive(:fetch_existing_members).and_return(existing_members)
-      allow(manager).to receive(:determine_role).and_return("admin")
-      allow(manager).to receive(:update_member_role).and_return({ success: true })
+    before do
+      allow(users_collection).to receive(:find_each).and_yield(user)
+      allow(manager).to receive(:members_by_email).and_return(existing_members)
+    end
+    
+    it "updates existing member when role changes with custom role" do
+      role_mapping = { admin?: "admin" }
+      allow(user).to receive(:admin?).and_return(true)
+      allow(workspace_members).to receive(:update).and_return({ success: true })
       
-      results = manager.sync_users_to_workspace(users)
+      results = manager.sync_rails_users(users_collection, role_mapping: role_mapping)
       
-      expect(results[:updated]).to include(users.first)
+      expect(results[:updated]).to include(user)
     end
     
     it "handles update failure for existing member" do
-      allow(manager).to receive(:fetch_existing_members).and_return(existing_members)
-      allow(manager).to receive(:determine_role).and_return("admin")
-      allow(manager).to receive(:update_member_role).and_return({ success: false, error: "Update failed" })
+      role_mapping = { admin?: "admin" }
+      allow(user).to receive(:admin?).and_return(true)
+      allow(workspace_members).to receive(:update).and_return({ success: false, error: "Update failed" })
       
-      results = manager.sync_users_to_workspace(users)
+      results = manager.sync_rails_users(users_collection, role_mapping: role_mapping)
       
       expect(results[:failed]).not_to be_empty
     end

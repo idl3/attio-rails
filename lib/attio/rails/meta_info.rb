@@ -89,11 +89,7 @@ module Attio
           if defined?(::HealthCheck)
             ::HealthCheck.setup do |config|
               config.add_custom_check("attio") do
-                if Attio::Rails::MetaInfo.healthy?
-                  ""
-                else
-                  "Attio API is not operational"
-                end
+                Attio::Rails::MetaInfo.healthy? ? "" : "Attio API is not operational"
               end
             end
           end

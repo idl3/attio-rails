@@ -311,6 +311,26 @@ module Attio
           end
         end
 
+        private def map_deal_field(data, field_key, config_field, fallback_fields)
+          # Try configured field first
+          if config_field.present? && respond_to?(config_field)
+            value = send(config_field)
+            data[field_key] = value if value.present?
+            return
+          end
+          
+          # Try fallback fields
+          fallback_fields.each do |field|
+            if respond_to?(field)
+              value = send(field)
+              if value.present?
+                data[field_key] = value
+                return
+              end
+            end
+          end
+        end
+
         private def pipeline_id
           self.class.attio_pipeline_id || attio_deal_configuration&.pipeline_id
         end
