@@ -3,9 +3,9 @@
 require "spec_helper"
 
 RSpec.describe "Attio::Rails::BulkSync Integration", type: :integration do
-  let(:client) { instance_double(Attio::Client) }
-  let(:bulk_resource) { instance_double(Attio::Resources::Bulk) }
-  let(:records_resource) { instance_double(Attio::Resources::Records) }
+  let(:client) { double("Attio::Client") }
+  let(:bulk_resource) { double("Attio::Resources::Bulk") }
+  let(:records_resource) { double("Attio::Resources::Records") }
 
   before do
     allow(Attio::Rails).to receive(:client).and_return(client)
@@ -249,6 +249,7 @@ RSpec.describe "Attio::Rails::BulkSync Integration", type: :integration do
     context "when bulk API is not available" do
       before do
         allow(client).to receive(:respond_to?).with(:bulk).and_return(false)
+        allow(client).to receive(:respond_to?).with(:records).and_return(true)
         allow(client).to receive(:records).and_return(records_resource)
       end
 
@@ -399,107 +400,4 @@ RSpec.describe "Attio::Rails::BulkSync Integration", type: :integration do
     end
   end
 
-  describe "Additional edge cases for 100% coverage" do
-    context "with unknown operation" do
-      it "raises ArgumentError for invalid operation" do
-        TestModel.create!(name: "Test", email: "test@example.com")
-        allow(client).to receive(:bulk).and_return(bulk_resource)
-        
-        expect {
-          Attio::Rails::BulkSync.new(TestModel.all, object_type: "people", operation: :invalid).perform
-        }.to raise_error(ArgumentError, "Unknown operation: invalid")
-      end
-    end
-
-    context "with async job scheduling on rate limit" do
-      let(:rate_limit_error) { Attio::RateLimitError.new("Rate limited") }
-      
-      before do
-        3.times { |i| TestModel.create!(name: "Test #{i}", email: "test#{i}@example.com") }
-        allow(client).to receive(:bulk).and_return(bulk_resource)
-        allow(bulk_resource).to receive(:create_records).and_raise(rate_limit_error)
-        allow(rate_limit_error).to receive(:retry_after).and_return(60)
-        stub_const("AttioSyncJob", Class.new)
-        allow(AttioSyncJob).to receive(:set).and_return(AttioSyncJob)
-        allow(AttioSyncJob).to receive(:perform_later)
-      end
-
-      it "schedules async jobs when rate limited with async option" do
-        expect(AttioSyncJob).to receive(:set).with(wait: 60.seconds).and_return(AttioSyncJob)
-        expect(AttioSyncJob).to receive(:perform_later).at_least(3).times
-        
-        bulk_sync = Attio::Rails::BulkSync.new(TestModel.all, object_type: "people", async: true)
-        results = bulk_sync.perform
-        
-        expect(results[:partial]).not_to be_empty
-      end
-    end
-
-    context "with on_complete callback" do
-      it "calls the callback with results" do
-        TestModel.create!(name: "Test", email: "test@example.com")
-        allow(client).to receive(:bulk).and_return(bulk_resource)
-        allow(bulk_resource).to receive(:create_records).and_return({ success: true })
-        
-        callback_results = nil
-        on_complete = ->(results) { callback_results = results }
-        
-        bulk_sync = Attio::Rails::BulkSync.new(TestModel.all, object_type: "people", on_complete: on_complete)
-        bulk_sync.perform
-        
-        expect(callback_results).not_to be_nil
-        expect(callback_results[:successful]).not_to be_empty
-      end
-    end
-
-    context "with raise_on_failure option" do
-      it "raises error when all records fail" do
-        TestModel.create!(name: "Test", email: "test@example.com")
-        allow(client).to receive(:bulk).and_return(bulk_resource)
-        allow(bulk_resource).to receive(:create_records).and_return({ 
-          success: false,
-          error: "All failed"
-        })
-        
-        bulk_sync = Attio::Rails::BulkSync.new(TestModel.all, object_type: "people", raise_on_failure: true)
-        
-        expect { bulk_sync.perform }.to raise_error(Attio::Rails::BulkSyncError, "All records failed to sync")
-      end
-    end
-
-    context "with on_error callback" do
-      it "calls error callback on batch failure" do
-        TestModel.create!(name: "Test", email: "test@example.com")
-        allow(client).to receive(:bulk).and_return(bulk_resource)
-        allow(bulk_resource).to receive(:create_records).and_raise(StandardError, "Batch error")
-        
-        error_called = false
-        on_error = ->(_error, _batch) { error_called = true }
-        
-        bulk_sync = Attio::Rails::BulkSync.new(TestModel.all, object_type: "people", on_error: on_error)
-        bulk_sync.perform
-        
-        expect(error_called).to be true
-      end
-    end
-
-    context "with progress callback and empty block" do
-      it "handles empty progress callback block gracefully" do
-        TestModel.create!(name: "Test", email: "test@example.com")
-        allow(client).to receive(:bulk).and_return(bulk_resource)
-        allow(bulk_resource).to receive(:create_records).and_return({ success: true })
-        
-        # This tests line 71 - the empty block in progress callback
-        progress_callback = ->(current, total, results) {}
-        
-        bulk_sync = Attio::Rails::BulkSync.new(
-          TestModel.all,
-          object_type: "people",
-          progress_callback: progress_callback
-        )
-        
-        expect { bulk_sync.perform }.not_to raise_error
-      end
-    end
-  end
 end

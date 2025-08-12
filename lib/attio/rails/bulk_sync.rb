@@ -73,6 +73,8 @@ module Attio
       rescue Attio::RateLimitError => e
         handle_rate_limit_error(e, batch, operation)
       rescue StandardError => e
+        # Don't catch ArgumentError - let it propagate
+        raise if e.is_a?(ArgumentError)
         handle_batch_error(e, batch)
       end
 
@@ -95,7 +97,7 @@ module Attio
       private def update_batch(batch)
         updates = batch.map do |record|
           {
-            id: record.attio_id,
+            id: record.respond_to?(:attio_id) ? record.attio_id : record.attio_record_id,
             data: transform_record(record),
           }
         end
@@ -135,7 +137,7 @@ module Attio
       end
 
       private def delete_batch(batch)
-        ids = batch.map(&:attio_id).compact
+        ids = batch.map { |r| r.respond_to?(:attio_id) ? r.attio_id : r.attio_record_id }.compact
         return if ids.empty?
 
         response = if @client.respond_to?(:bulk)
@@ -315,12 +317,13 @@ module Attio
         skipped = []
 
         batch.each do |record|
-          unless record.attio_id
+          attio_id = record.respond_to?(:attio_id) ? record.attio_id : record.attio_record_id
+          unless attio_id
             skipped << record.id
             next
           end
 
-          @client.records.delete(object: object_type, id: record.attio_id)
+          @client.records.delete(object: object_type, id: attio_id)
           successful << record.id
         rescue StandardError => e
           failed << { id: record.id, error: e.message }
