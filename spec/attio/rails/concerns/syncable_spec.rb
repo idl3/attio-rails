@@ -373,4 +373,27 @@ RSpec.describe Attio::Rails::Concerns::Syncable do
       expect { model_class.create!(name: "Test", email: "test@example.com") }.not_to raise_error
     end
   end
+
+  describe "error path coverage" do
+    let(:client) { instance_double(Attio::Client) }
+    let(:records) { instance_double(Attio::Resources::Records) }
+    
+    before do
+      allow(Attio::Rails).to receive(:client).and_return(client)
+      allow(client).to receive(:records).and_return(records)
+    end
+    
+    context "when handle_attio_error raises" do
+      it "handles errors from error handler itself" do
+        # This tests line 166
+        allow(model).to receive(:handle_attio_error) do
+          raise StandardError, "Error handler failed"
+        end
+        
+        allow(records).to receive(:create).and_raise(Attio::Error, "API Error")
+        
+        expect { model.sync_to_attio_now }.to raise_error(StandardError, "Error handler failed")
+      end
+    end
+  end
 end
