@@ -197,38 +197,11 @@ module Attio
             pipeline_id: pipeline_id,
           }
 
-          # Include stage_id if available
-          if self.class.attio_stage_field.present? && respond_to?(self.class.attio_stage_field)
-            data[:stage_id] = send(self.class.attio_stage_field)
-          elsif respond_to?(:stage_id) && stage_id
-            data[:stage_id] = stage_id
-          elsif respond_to?(:status) && status
-            data[:stage_id] = status
-          end
-
-          # Add company field using configured name
-          if config&.company_field_name
-            field_name = config.company_field_name
-            data[:company_id] = send(field_name) if respond_to?(field_name) && send(field_name)
-          elsif respond_to?(:company_attio_id) && company_attio_id
-            data[:company_id] = company_attio_id
-          end
-
-          # Add owner field using configured name
-          if config&.owner_field_name
-            field_name = config.owner_field_name
-            data[:owner_id] = send(field_name) if respond_to?(field_name) && send(field_name)
-          elsif respond_to?(:owner_attio_id) && owner_attio_id
-            data[:owner_id] = owner_attio_id
-          end
-
-          # Add expected close date using configured name
-          if config&.expected_close_date_field_name
-            field_name = config.expected_close_date_field_name
-            data[:expected_close_date] = send(field_name) if respond_to?(field_name) && send(field_name)
-          elsif respond_to?(:expected_close_date) && expected_close_date
-            data[:expected_close_date] = expected_close_date
-          end
+          # Map all fields using DRY helper
+          map_deal_field(data, :stage_id, self.class.attio_stage_field, [:stage_id, :status])
+          map_deal_field(data, :company_id, config&.company_field_name, [:company_attio_id])
+          map_deal_field(data, :owner_id, config&.owner_field_name, [:owner_attio_id])
+          map_deal_field(data, :expected_close_date, config&.expected_close_date_field_name, [:expected_close_date])
 
           if config&.transform_method
             case config.transform_method
