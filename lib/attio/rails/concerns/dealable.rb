@@ -79,6 +79,8 @@ module Attio
           if respond_to?(:before_attio_deal_sync, true)
             before_attio_deal_sync
           end
+          
+          run_deal_callback(:before_sync)
 
           deal_data = to_attio_deal
 
@@ -296,22 +298,38 @@ module Attio
 
         private def deal_value
           if attio_deal_configuration&.value_field
-            send(attio_deal_configuration.value_field)
-          elsif respond_to?(:value)
-            value
-          elsif respond_to?(:amount)
-            amount
-          else
-            0
+            if respond_to?(attio_deal_configuration.value_field)
+              val = send(attio_deal_configuration.value_field)
+              return val unless val.nil?
+            end
+            if respond_to?(:amount)
+              val = amount
+              return val unless val.nil?
+            end
+            return 0
           end
+          
+          if respond_to?(:value)
+            val = value
+            return val unless val.nil?
+          end
+          
+          if respond_to?(:amount)
+            val = amount
+            return val unless val.nil?
+          end
+          
+          0
         end
 
         private def map_deal_field(data, field_key, config_field, fallback_fields)
           # Try configured field first
           if config_field.present? && respond_to?(config_field)
             value = send(config_field)
-            data[field_key] = value if value.present?
-            return
+            if value.present?
+              data[field_key] = value
+              return
+            end
           end
           
           # Try fallback fields
@@ -332,7 +350,12 @@ module Attio
 
         def current_stage_id
           if self.class.attio_stage_field.present? && respond_to?(self.class.attio_stage_field)
-            send(self.class.attio_stage_field)
+            value = send(self.class.attio_stage_field)
+            return value if value.present?
+          end
+          
+          if defined?(@current_stage_id) && @current_stage_id.present?
+            @current_stage_id
           elsif respond_to?(:stage_id)
             stage_id
           elsif respond_to?(:status)
@@ -344,11 +367,16 @@ module Attio
           callback = attio_deal_configuration&.callbacks&.dig(callback_name)
           return unless callback
 
-          case callback
-          when Proc
-            instance_exec(*args, &callback)
-          when Symbol, String
-            send(callback, *args)
+          begin
+            case callback
+            when Proc
+              instance_exec(*args, &callback)
+            when Symbol, String
+              send(callback, *args)
+            end
+          rescue StandardError => e
+            Attio::Rails.logger.error "Callback error in #{callback_name}: #{e.message}"
+            # Don't re-raise, allow the sync to continue
           end
         end
 

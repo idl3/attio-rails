@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe "Attio::Rails::Jobs::AttioSyncJob Coverage" do
+RSpec.describe Attio::Rails::Jobs::AttioSyncJob do
   let(:model) { TestModel.create!(name: "Test", email: "test@example.com") }
   let(:client) { double("Attio::Client") }
   let(:records_resource) { double("Attio::Resources::Records") }

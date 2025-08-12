@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2025-08-12
+
+### Changed
+- Updated attio dependency to 0.5.0 for enhanced API features
+- Improved callback error handling in Dealable concern to log and continue
+- Enhanced deal value calculation with proper nil value handling and fallback chain
+- Fixed stage field resolution to properly handle configured fields and fallbacks
+- Fixed field mapping to correctly fall back when configured fields return nil
+
+### Fixed
+- Callback execution now properly handles both method-based and configuration-based callbacks
+- Fixed NoMethodError when configured value field doesn't exist on the model
+- Fixed current_stage_id method to properly check all fallback options
+
+### Compatibility
+- Fully compatible with attio 0.5.0 which adds:
+  - Custom Objects support with full CRUD operations
+  - Records enhancements with assert and update_with_put methods  
+  - Lists management with filtering and sorting
+  - Attributes management for configuration updates
+
 ## [0.3.1] - 2025-08-12
 
 ### Fixed
@@ -101,7 +122,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Batch operations support
 - Custom field transformations
 
-[Unreleased]: https://github.com/idl3/attio-rails/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/idl3/attio-rails/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/idl3/attio-rails/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/idl3/attio-rails/compare/v0.2.0...v0.3.1
 [0.2.0]: https://github.com/idl3/attio-rails/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/idl3/attio-rails/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/idl3/attio-rails/compare/v0.1.0...v0.1.1

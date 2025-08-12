@@ -166,28 +166,30 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Tests" do
     it "executes before_attio_deal_sync callback" do
       callback_executed = false
       
-      deal_class.class_eval do
-        define_method(:before_attio_deal_sync) do
-          callback_executed = true
-        end
+      deal_class.attio_deal_config do
+        before_sync -> { callback_executed = true }
+      end
+      
+      # Need to capture the variable in the lambda's binding
+      deal.instance_variable_set(:@callback_executed_marker, false)
+      deal_class.attio_deal_config do
+        before_sync -> { @callback_executed_marker = true }
       end
       
       allow(deals_resource).to receive(:update).and_return({ "id" => "deal_123" })
       
       deal.sync_deal_to_attio_now
-      expect(callback_executed).to be true
+      expect(deal.instance_variable_get(:@callback_executed_marker)).to be true
     end
     
     it "logs and continues when callback raises error" do
-      deal_class.class_eval do
-        define_method(:after_attio_deal_sync) do |_result|
-          raise "Callback failed"
-        end
+      deal_class.attio_deal_config do
+        after_sync ->(_result) { raise "Callback failed" }
       end
       
       allow(deals_resource).to receive(:update).and_return({ "id" => "deal_123" })
       
-      expect(Attio::Rails.logger).to receive(:error).with(/Callback error in after_attio_deal_sync/)
+      expect(Attio::Rails.logger).to receive(:error).with(/Callback error in after_sync/)
       
       result = deal.sync_deal_to_attio_now
       expect(result).to eq({ "id" => "deal_123" })
