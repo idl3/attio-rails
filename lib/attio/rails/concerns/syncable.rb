@@ -156,15 +156,11 @@ module Attio
         def transformed_attio_attributes
           attributes = attio_attributes
 
-          if attio_transform_method
-            case attio_transform_method
-            when Proc
-              attio_transform_method.call(attributes, self)
-            when Symbol, String
-              send(attio_transform_method, attributes)
-            else
-              attributes
-            end
+          case attio_transform_method
+          when Proc
+            attio_transform_method.call(attributes, self)
+          when Symbol, String
+            send(attio_transform_method, attributes)
           else
             attributes
           end
