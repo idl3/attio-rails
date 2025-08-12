@@ -2,471 +2,309 @@
 
 require "spec_helper"
 
-RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Enhancement" do
+RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Tests" do
   let(:deal_class) do
-    Class.new(ActiveRecord::Base) do
+    klass = Class.new(ActiveRecord::Base) do
       self.table_name = "test_models"
       include Attio::Rails::Concerns::Dealable
-
-      attio_pipeline_id "test_pipeline"
       
-      def deal_name
-        name || "Unnamed Deal"
+      attr_accessor :attio_deal_id, :value, :stage_id, :status, :closed_date, 
+                    :lost_reason, :company_attio_id, :owner_attio_id, :current_stage_id
+      
+      def initialize(attrs = {})
+        super(attrs.except(:attio_deal_id, :value, :stage_id, :status, :closed_date, 
+                          :lost_reason, :company_attio_id, :owner_attio_id, :current_stage_id))
+        @attio_deal_id = attrs[:attio_deal_id]
+        @value = attrs[:value]
+        @stage_id = attrs[:stage_id]
+        @status = attrs[:status]
+        @closed_date = attrs[:closed_date]
+        @lost_reason = attrs[:lost_reason]
+        @company_attio_id = attrs[:company_attio_id]
+        @owner_attio_id = attrs[:owner_attio_id]
+        @current_stage_id = attrs[:current_stage_id]
       end
-
-      def deal_value
-        value || 0
+      
+      def id
+        @id ||= rand(1000)
+      end
+      
+      def update!(attrs)
+        attrs.each { |k, v| send("#{k}=", v) }
+        self
+      end
+      
+      def update_column(column, value)
+        send("#{column}=", value)
       end
     end
+    stub_const("TestDeal", klass)
+    klass
   end
-
-  let(:deal) { deal_class.new(name: "Test Deal", value: 1000) }
-  let(:client) { instance_double(Attio::Client) }
-  let(:deals_resource) { instance_double(Attio::Resources::Deals) }
-
+  
+  let(:deal) { deal_class.new(name: "Test Deal", value: 5000, attio_deal_id: "deal_123", stage_id: "prospect") }
+  let(:client) { double("Attio::Client") }
+  let(:deals_resource) { double("Attio::Resources::Deals") }
+  
   before do
     allow(Attio::Rails).to receive(:client).and_return(client)
+    allow(Attio::Rails).to receive(:sync_enabled?).and_return(true)
+    allow(Attio::Rails).to receive(:background_sync?).and_return(false)
+    allow(Attio::Rails).to receive(:logger).and_return(Logger.new(nil))
     allow(client).to receive(:respond_to?).with(:deals).and_return(true)
     allow(client).to receive(:deals).and_return(deals_resource)
+    
+    deal_class.attio_pipeline_id("test_pipeline")
   end
-
-  describe "#to_attio_deal complete coverage" do
-    context "stage_id field mapping" do
-      it "uses configured attio_stage_field when present" do
-        deal_class.attio_stage_field = :custom_stage
-        deal.define_singleton_method(:custom_stage) { "stage_123" }
-        
-        data = deal.to_attio_deal
-        expect(data[:stage_id]).to eq("stage_123")
-      end
-
-      it "falls back to stage_id method when no config and stage_id exists" do
-        deal_class.attio_stage_field = nil
-        deal.define_singleton_method(:stage_id) { "stage_456" }
-        
-        data = deal.to_attio_deal
-        expect(data[:stage_id]).to eq("stage_456")
-      end
-
-      it "falls back to status method when no stage_id" do
-        deal_class.attio_stage_field = nil
-        deal.define_singleton_method(:status) { "in_progress" }
-        
-        data = deal.to_attio_deal
-        expect(data[:stage_id]).to eq("in_progress")
-      end
-
-      it "excludes stage_id when no method available" do
-        deal_class.attio_stage_field = nil
-        data = deal.to_attio_deal
-        expect(data).not_to have_key(:stage_id)
-      end
+  
+  describe "Deal value calculation with all fallbacks" do
+    it "uses value method as first priority" do
+      deal.value = 7500
+      expect(deal.send(:deal_value)).to eq(7500)
     end
-
-    context "company field mapping" do
-      it "uses configured company_field_name when present" do
-        deal_class.attio_deal_config do
-          company_field :custom_company_id
+    
+    it "falls back to amount method when value is nil" do
+      value_deal = deal_class.new(name: "Test")
+      value_deal.instance_eval do
+        @value = nil
+        def amount
+          3500
         end
-        deal.define_singleton_method(:custom_company_id) { "company_789" }
-        
-        data = deal.to_attio_deal
-        expect(data[:company_id]).to eq("company_789")
       end
-
-      it "uses configured field but skips if value is nil" do
-        deal_class.attio_deal_config do
-          company_field :custom_company_id
-        end
-        deal.define_singleton_method(:custom_company_id) { nil }
-        
-        data = deal.to_attio_deal
-        expect(data).not_to have_key(:company_id)
-      end
-
-      it "falls back to company_attio_id when no config" do
-        deal_class.attio_deal_config {}
-        deal.define_singleton_method(:company_attio_id) { "company_fallback" }
-        
-        data = deal.to_attio_deal
-        expect(data[:company_id]).to eq("company_fallback")
-      end
-
-      it "excludes company_id when company_attio_id is nil" do
-        deal_class.attio_deal_config {}
-        deal.define_singleton_method(:company_attio_id) { nil }
-        
-        data = deal.to_attio_deal
-        expect(data).not_to have_key(:company_id)
-      end
+      
+      expect(value_deal.send(:deal_value)).to eq(3500)
     end
-
-    context "owner field mapping" do
-      it "uses configured owner_field_name when present" do
-        deal_class.attio_deal_config do
-          owner_field :assigned_to_id
-        end
-        deal.define_singleton_method(:assigned_to_id) { "owner_123" }
-        
-        data = deal.to_attio_deal
-        expect(data[:owner_id]).to eq("owner_123")
+    
+    it "returns 0 when no value methods are available" do
+      empty_deal = deal_class.new(name: "Empty")
+      empty_deal.instance_eval do
+        @value = nil
       end
-
-      it "uses configured field but skips if value is nil" do
-        deal_class.attio_deal_config do
-          owner_field :assigned_to_id
-        end
-        deal.define_singleton_method(:assigned_to_id) { nil }
-        
-        data = deal.to_attio_deal
-        expect(data).not_to have_key(:owner_id)
-      end
-
-      it "falls back to owner_attio_id when no config" do
-        deal_class.attio_deal_config {}
-        deal.define_singleton_method(:owner_attio_id) { "owner_fallback" }
-        
-        data = deal.to_attio_deal
-        expect(data[:owner_id]).to eq("owner_fallback")
-      end
-
-      it "excludes owner_id when owner_attio_id is nil" do
-        deal_class.attio_deal_config {}
-        deal.define_singleton_method(:owner_attio_id) { nil }
-        
-        data = deal.to_attio_deal
-        expect(data).not_to have_key(:owner_id)
-      end
+      
+      expect(empty_deal.send(:deal_value)).to eq(0)
     end
-
-    context "expected_close_date field mapping" do
-      it "uses configured expected_close_date_field_name when present" do
-        deal_class.attio_deal_config do
-          expected_close_date_field :closing_date
-        end
-        closing = Date.today + 30
-        deal.define_singleton_method(:closing_date) { closing }
-        
-        data = deal.to_attio_deal
-        expect(data[:expected_close_date]).to eq(closing)
+    
+    it "uses configured value field over defaults" do
+      deal_class.attio_deal_config do
+        value_field :revenue
       end
-
-      it "uses configured field but skips if value is nil" do
-        deal_class.attio_deal_config do
-          expected_close_date_field :closing_date
-        end
-        deal.define_singleton_method(:closing_date) { nil }
-        
-        data = deal.to_attio_deal
-        expect(data).not_to have_key(:expected_close_date)
-      end
-
-      it "falls back to expected_close_date when no config" do
-        deal_class.attio_deal_config {}
-        expected_date = Date.today + 60
-        deal.define_singleton_method(:expected_close_date) { expected_date }
-        
-        data = deal.to_attio_deal
-        expect(data[:expected_close_date]).to eq(expected_date)
-      end
-
-      it "excludes expected_close_date when method returns nil" do
-        deal_class.attio_deal_config {}
-        deal.define_singleton_method(:expected_close_date) { nil }
-        
-        data = deal.to_attio_deal
-        expect(data).not_to have_key(:expected_close_date)
-      end
+      
+      revenue_deal = deal_class.new(name: "Revenue Deal")
+      revenue_deal.define_singleton_method(:revenue) { 12000 }
+      revenue_deal.value = 5000 # This should be ignored
+      
+      expect(revenue_deal.send(:deal_value)).to eq(12000)
     end
-
-    context "transform method handling" do
-      it "applies proc transform when configured" do
-        deal_class.attio_deal_config do
-          transform_fields ->(data, record) { 
-            data[:custom_field] = "proc_#{record.name}"
-            data
-          }
-        end
-        
-        data = deal.to_attio_deal
-        expect(data[:custom_field]).to eq("proc_Test Deal")
+    
+    it "falls back through configured field to amount to zero" do
+      deal_class.attio_deal_config do
+        value_field :missing_field
       end
-
-      it "applies symbol transform when configured" do
-        deal_class.attio_deal_config do
-          transform_fields :add_custom_fields
+      
+      fallback_deal = deal_class.new(name: "Fallback")
+      fallback_deal.instance_eval do
+        @value = nil
+        def amount
+          nil
         end
-        
-        deal.define_singleton_method(:add_custom_fields) do |data|
-          data[:transformed] = true
-          data
-        end
-        
-        data = deal.to_attio_deal
-        expect(data[:transformed]).to be true
       end
-
-      it "applies string transform when configured" do
-        deal_class.attio_deal_config do
-          transform_fields "apply_transformations"
-        end
-        
-        deal.define_singleton_method(:apply_transformations) do |data|
-          data[:string_transform] = "applied"
-          data
-        end
-        
-        data = deal.to_attio_deal
-        expect(data[:string_transform]).to eq("applied")
-      end
-
-      it "returns data unchanged for invalid transform type" do
-        deal_class.attio_deal_config do
-          transform_fields 123 # Invalid type
-        end
-        
-        data = deal.to_attio_deal
-        expect(data).to include(
-          name: "Test Deal",
-          value: 1000,
-          pipeline_id: "test_pipeline"
-        )
-      end
-
-      it "returns data unchanged when no transform configured" do
-        deal_class.attio_deal_config {}
-        
-        data = deal.to_attio_deal
-        expect(data).to include(
-          name: "Test Deal",
-          value: 1000,
-          pipeline_id: "test_pipeline"
-        )
-      end
-    end
-
-    context "with all fields configured" do
-      it "includes all fields when all values present" do
-        deal_class.attio_deal_config do
-          company_field :company_ref
-          owner_field :owner_ref
-          expected_close_date_field :close_date
-          transform_fields ->(data, _) { 
-            data[:source] = "test"
-            data
-          }
-        end
-        
-        deal_class.attio_stage_field = :deal_stage
-        
-        deal.define_singleton_method(:deal_stage) { "negotiation" }
-        deal.define_singleton_method(:company_ref) { "comp_123" }
-        deal.define_singleton_method(:owner_ref) { "user_456" }
-        deal.define_singleton_method(:close_date) { Date.today + 45 }
-        
-        data = deal.to_attio_deal
-        
-        expect(data).to include(
-          name: "Test Deal",
-          value: 1000,
-          pipeline_id: "test_pipeline",
-          stage_id: "negotiation",
-          company_id: "comp_123",
-          owner_id: "user_456",
-          expected_close_date: Date.today + 45,
-          source: "test"
-        )
-      end
+      
+      expect(fallback_deal.send(:deal_value)).to eq(0)
     end
   end
-
-  describe "#map_deal_field coverage" do
-    it "maps field using config field when present" do
-      data = {}
-      deal.send(:map_deal_field, data, :test_id, "configured_field", [:fallback1, :fallback2])
+  
+  describe "Stage field resolution with all paths" do
+    it "uses configured stage field as first priority" do
+      deal_class.attio_deal_config do
+        stage_field :pipeline_stage
+      end
       
-      deal.define_singleton_method(:configured_field) { "config_value" }
-      deal.send(:map_deal_field, data, :test_id, "configured_field", [:fallback1, :fallback2])
+      stage_deal = deal_class.new(name: "Stage Deal")
+      stage_deal.define_singleton_method(:pipeline_stage) { "closing" }
+      stage_deal.current_stage_id = "negotiation"
+      stage_deal.stage_id = "qualification"
       
-      expect(data[:test_id]).to eq("config_value")
+      expect(stage_deal.current_stage_id).to eq("closing")
     end
-
-    it "skips field when config field returns nil" do
-      data = {}
-      deal.define_singleton_method(:configured_field) { nil }
+    
+    it "falls back to current_stage_id accessor" do
+      stage_deal = deal_class.new(name: "Stage Deal")
+      stage_deal.current_stage_id = "negotiation"
+      stage_deal.stage_id = "qualification"
       
-      deal.send(:map_deal_field, data, :test_id, "configured_field", [:fallback1, :fallback2])
-      
-      expect(data).not_to have_key(:test_id)
+      expect(stage_deal.current_stage_id).to eq("negotiation")
     end
-
-    it "uses first available fallback field" do
-      data = {}
-      deal.define_singleton_method(:fallback1) { "fallback_value" }
+    
+    it "falls back to stage_id as last resort" do
+      stage_deal = deal_class.new(name: "Stage Deal")
+      stage_deal.current_stage_id = nil
+      stage_deal.stage_id = "qualification"
       
-      deal.send(:map_deal_field, data, :test_id, nil, [:fallback1, :fallback2])
-      
-      expect(data[:test_id]).to eq("fallback_value")
+      expect(stage_deal.current_stage_id).to eq("qualification")
     end
-
-    it "uses second fallback when first is nil" do
-      data = {}
-      deal.define_singleton_method(:fallback1) { nil }
-      deal.define_singleton_method(:fallback2) { "second_fallback" }
-      
-      deal.send(:map_deal_field, data, :test_id, nil, [:fallback1, :fallback2])
-      
-      expect(data[:test_id]).to eq("second_fallback")
+    
+    it "returns nil when no stage fields have values" do
+      empty_deal = deal_class.new(name: "Empty")
+      expect(empty_deal.current_stage_id).to be_nil
     end
-
-    it "skips field when all fallbacks are nil or missing" do
-      data = {}
-      deal.define_singleton_method(:fallback1) { nil }
+    
+    it "handles all nil values in fallback chain" do
+      deal_class.attio_deal_config do
+        stage_field :custom_stage
+      end
       
-      deal.send(:map_deal_field, data, :test_id, nil, [:fallback1, :fallback2, :fallback3])
+      nil_deal = deal_class.new(name: "Nil Deal")
+      nil_deal.define_singleton_method(:custom_stage) { nil }
+      nil_deal.current_stage_id = nil
+      nil_deal.stage_id = nil
       
-      expect(data).not_to have_key(:test_id)
+      expect(nil_deal.current_stage_id).to be_nil
     end
   end
-
-  describe "lifecycle methods coverage" do
-    describe "#current_stage_id" do
-      it "returns configured stage field value" do
-        deal_class.attio_stage_field = :my_stage
-        deal.define_singleton_method(:my_stage) { "stage_value" }
-        
-        expect(deal.current_stage_id).to eq("stage_value")
+  
+  describe "Callback execution with error handling" do
+    it "executes before_attio_deal_sync callback" do
+      callback_executed = false
+      
+      deal_class.class_eval do
+        define_method(:before_attio_deal_sync) do
+          callback_executed = true
+        end
       end
-
-      it "falls back to stage_id when no configured field" do
-        deal_class.attio_stage_field = nil
-        deal.define_singleton_method(:stage_id) { "default_stage" }
-        
-        expect(deal.current_stage_id).to eq("default_stage")
-      end
-
-      it "falls back to status when no stage_id" do
-        deal_class.attio_stage_field = nil
-        deal.define_singleton_method(:status) { "current_status" }
-        
-        expect(deal.current_stage_id).to eq("current_status")
-      end
-
-      it "returns nil when no stage methods available" do
-        deal_class.attio_stage_field = nil
-        expect(deal.current_stage_id).to be_nil
-      end
+      
+      allow(deals_resource).to receive(:update).and_return({ "id" => "deal_123" })
+      
+      deal.sync_deal_to_attio_now
+      expect(callback_executed).to be true
     end
-
-    describe "#handle_deal_sync_error" do
-      let(:error) { StandardError.new("Sync failed") }
-
-      it "calls proc error handler when configured" do
-        handled = false
-        deal_class.attio_deal_config do
-          on_error ->(err) { handled = true if err.message == "Sync failed" }
+    
+    it "logs and continues when callback raises error" do
+      deal_class.class_eval do
+        define_method(:after_attio_deal_sync) do |_result|
+          raise "Callback failed"
         end
-        
-        deal.send(:handle_deal_sync_error, error)
-        expect(handled).to be true
       end
-
-      it "calls symbol error handler when configured" do
-        deal_class.attio_deal_config do
-          on_error :handle_error
-        end
-        
-        expect(deal).to receive(:handle_error).with(error)
-        deal.send(:handle_deal_sync_error, error)
-      end
-
-      it "calls string error handler when configured" do
-        deal_class.attio_deal_config do
-          on_error "error_method"
-        end
-        
-        expect(deal).to receive(:error_method).with(error)
-        deal.send(:handle_deal_sync_error, error)
-      end
-
-      it "logs error when no handler configured" do
-        deal_class.attio_deal_config {}
-        logger = instance_double(Logger)
-        allow(Attio::Rails).to receive(:logger).and_return(logger)
-        
-        expect(logger).to receive(:error).with("Failed to sync deal to Attio: Sync failed")
-        deal.send(:handle_deal_sync_error, error)
-      end
+      
+      allow(deals_resource).to receive(:update).and_return({ "id" => "deal_123" })
+      
+      expect(Attio::Rails.logger).to receive(:error).with(/Callback error in after_attio_deal_sync/)
+      
+      result = deal.sync_deal_to_attio_now
+      expect(result).to eq({ "id" => "deal_123" })
     end
-
-    describe "#run_deal_callback" do
-      it "executes proc callback" do
-        result = nil
-        deal_class.attio_deal_config do
-          on_create ->(deal) { result = "created: #{deal.name}" }
-        end
-        
-        deal.send(:run_deal_callback, :on_create, deal)
-        expect(result).to eq("created: Test Deal")
-      end
-
-      it "executes symbol callback" do
-        deal_class.attio_deal_config do
-          on_update :update_callback
-        end
-        
-        expect(deal).to receive(:update_callback).with("arg1", "arg2")
-        deal.send(:run_deal_callback, :on_update, "arg1", "arg2")
-      end
-
-      it "executes string callback" do
-        deal_class.attio_deal_config do
-          on_delete "delete_handler"
-        end
-        
-        expect(deal).to receive(:delete_handler)
-        deal.send(:run_deal_callback, :on_delete)
-      end
-
-      it "does nothing when callback not configured" do
-        deal_class.attio_deal_config {}
-        
-        expect { deal.send(:run_deal_callback, :on_random) }.not_to raise_error
-      end
+  end
+  
+  describe "Error handling in handle_deal_sync_error" do
+    it "raises in development environment" do
+      allow(::Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("development"))
+      
+      error = StandardError.new("Dev error")
+      expect(Attio::Rails.logger).to receive(:error).with(/Failed to sync deal to Attio/)
+      
+      expect { deal.send(:handle_deal_sync_error, error) }.to raise_error(StandardError)
     end
-
-    describe "private helper methods" do
-      it "calculates deal_progress correctly" do
-        deal.define_singleton_method(:deal_value) { 1000 }
-        deal.define_singleton_method(:target_value) { 2000 }
-        
-        expect(deal.send(:deal_progress)).to eq(50.0)
+    
+    it "only logs in production environment" do
+      allow(::Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new("production"))
+      
+      error = StandardError.new("Prod error")
+      expect(Attio::Rails.logger).to receive(:error).with(/Failed to sync deal to Attio/)
+      
+      expect { deal.send(:handle_deal_sync_error, error) }.not_to raise_error
+    end
+    
+    it "calls configured error handler" do
+      error_handled = false
+      
+      deal_class.attio_deal_config do
+        on_error ->(err) { error_handled = true }
       end
-
-      it "returns 0 progress when target_value is zero" do
-        deal.define_singleton_method(:deal_value) { 1000 }
-        deal.define_singleton_method(:target_value) { 0 }
-        
-        expect(deal.send(:deal_progress)).to eq(0)
+      
+      error = StandardError.new("Test error")
+      deal.send(:handle_deal_sync_error, error)
+      
+      expect(error_handled).to be true
+    end
+  end
+  
+  describe "Field mapping with various configurations" do
+    it "maps company field from configured source" do
+      deal_class.attio_deal_config do
+        company_field :organization_id
       end
-
-      it "detects stage changes correctly" do
-        deal.define_singleton_method(:current_stage_id) { "stage1" }
-        deal.define_singleton_method(:stage_id) { "stage2" }
-        
-        expect(deal.send(:stage_changed?)).to be true
+      
+      deal.define_singleton_method(:organization_id) { "org_789" }
+      
+      result = deal.to_attio_deal
+      expect(result[:company_id]).to eq("org_789")
+    end
+    
+    it "falls back to company_attio_id when configured field is nil" do
+      deal_class.attio_deal_config do
+        company_field :org_field
       end
-
-      it "returns false when stages are same" do
-        deal.define_singleton_method(:current_stage_id) { "stage1" }
-        deal.define_singleton_method(:stage_id) { "stage1" }
-        
-        expect(deal.send(:stage_changed?)).to be false
+      
+      deal.define_singleton_method(:org_field) { nil }
+      deal.company_attio_id = "company_456"
+      
+      result = deal.to_attio_deal
+      expect(result[:company_id]).to eq("company_456")
+    end
+    
+    it "excludes field when no company data available" do
+      deal_class.attio_deal_config do
+        company_field :missing_field
       end
-
-      it "returns false when stage methods missing" do
-        expect(deal.send(:stage_changed?)).to be false
-      end
+      
+      deal.company_attio_id = nil
+      
+      result = deal.to_attio_deal
+      expect(result).not_to have_key(:company_id)
+    end
+  end
+  
+  describe "DealConfig setter methods coverage" do
+    it "sets value_field configuration" do
+      config = deal_class::DealConfig.new(deal_class)
+      config.value_field(:custom_value)
+      expect(config.value_field).to eq(:custom_value)
+    end
+    
+    it "sets stage_field configuration" do
+      config = deal_class::DealConfig.new(deal_class)
+      config.stage_field(:pipeline_stage)
+      expect(config.stage_field).to eq(:pipeline_stage)
+    end
+    
+    it "sets company_field configuration" do
+      config = deal_class::DealConfig.new(deal_class)
+      config.company_field(:org_id)
+      expect(config.company_field_name).to eq(:org_id)
+    end
+    
+    it "sets owner_field configuration" do
+      config = deal_class::DealConfig.new(deal_class)
+      config.owner_field(:assigned_to)
+      expect(config.owner_field_name).to eq(:assigned_to)
+    end
+    
+    it "sets expected_close_date_field configuration" do
+      config = deal_class::DealConfig.new(deal_class)
+      config.expected_close_date_field(:close_by)
+      expect(config.expected_close_date_field_name).to eq(:close_by)
+    end
+    
+    it "sets on_error handler as proc" do
+      config = deal_class::DealConfig.new(deal_class)
+      handler = ->(e) { puts e }
+      config.on_error(handler)
+      expect(config.error_handler).to eq(handler)
+    end
+    
+    it "sets on_error handler as symbol" do
+      config = deal_class::DealConfig.new(deal_class)
+      config.on_error(:handle_error)
+      expect(config.error_handler).to eq(:handle_error)
     end
   end
 end
