@@ -33,7 +33,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
     context "Branch 1: attio_stage_field is present AND method exists" do
       it "returns value from configured field when both conditions are true" do
         # Set attio_stage_field to a custom field
-        deal_class.attio_stage_field :my_custom_stage
+        deal_class.attio_stage_field = :my_custom_stage
         
         # Define the custom method
         deal.define_singleton_method(:my_custom_stage) { "custom_stage_value" }
@@ -44,7 +44,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
 
       it "uses configured field even when stage_id also exists" do
         # Configure custom field
-        deal_class.attio_stage_field :priority_stage
+        deal_class.attio_stage_field = :priority_stage
         
         # Define both methods
         deal.define_singleton_method(:priority_stage) { "priority_value" }
@@ -59,7 +59,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
     context "Branch 2: attio_stage_field is present BUT method doesn't exist" do
       it "falls back to stage_id when configured field method is missing" do
         # Set attio_stage_field to a non-existent method
-        deal_class.attio_stage_field :nonexistent_method
+        deal_class.attio_stage_field = :nonexistent_method
         
         # Define stage_id fallback
         deal.define_singleton_method(:stage_id) { "stage_id_value" }
@@ -72,7 +72,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
     context "Branch 3: attio_stage_field is nil/blank" do
       it "uses stage_id when attio_stage_field is nil" do
         # Explicitly set to nil
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         
         # Define stage_id
         deal.define_singleton_method(:stage_id) { "direct_stage_id" }
@@ -96,7 +96,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
     context "Branch 4: No attio_stage_field, no stage_id, but has status" do
       it "falls back to status when stage_id doesn't exist" do
         # No configured field
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         
         # Don't define stage_id, only status
         deal.define_singleton_method(:status) { "status_value" }
@@ -107,7 +107,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
 
       it "uses status even when it's the only method available" do
         # Clear any configuration
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         
         # Only define status, ensure no stage_id method exists
         if deal.respond_to?(:stage_id)
@@ -123,7 +123,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
     context "Branch 5: No methods available at all" do
       it "returns nil when no stage methods exist" do
         # No configuration
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         
         # Ensure no fallback methods exist
         if deal.respond_to?(:stage_id)
@@ -140,7 +140,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
 
     context "Edge cases and combinations" do
       it "handles when configured field returns nil" do
-        deal_class.attio_stage_field :nullable_stage
+        deal_class.attio_stage_field = :nullable_stage
         deal.define_singleton_method(:nullable_stage) { nil }
         deal.define_singleton_method(:stage_id) { "backup_stage" }
         
@@ -149,7 +149,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
       end
 
       it "handles when stage_id returns nil but status exists" do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         deal.define_singleton_method(:stage_id) { nil }
         deal.define_singleton_method(:status) { "status_backup" }
         
@@ -159,12 +159,12 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
 
       it "correctly identifies present? for various field values" do
         # Test with symbol
-        deal_class.attio_stage_field :symbol_field
+        deal_class.attio_stage_field = :symbol_field
         deal.define_singleton_method(:symbol_field) { "symbol_value" }
         expect(deal.current_stage_id).to eq("symbol_value")
         
         # Test with string
-        deal_class.attio_stage_field "string_field"
+        deal_class.attio_stage_field = "string_field"
         deal.define_singleton_method(:string_field) { "string_value" }
         expect(deal.current_stage_id).to eq("string_value")
       end
@@ -172,7 +172,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
 
     context "Integration with stage_changed? method" do
       it "works correctly with stage_changed? when using configured field" do
-        deal_class.attio_stage_field :tracked_stage
+        deal_class.attio_stage_field = :tracked_stage
         
         # Set up current and new stages
         deal.define_singleton_method(:tracked_stage) { "current" }
@@ -186,7 +186,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
       end
 
       it "works correctly with stage_changed? when using stage_id" do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         
         # Define both methods
         deal.define_singleton_method(:current_stage_id) { "old_stage" }
@@ -207,13 +207,13 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
         end
       end
       
-      deal_class.attio_stage_field nil
+      deal_class.attio_stage_field = nil
       expect(deal.current_stage_id).to eq("negotiation")
     end
 
     it "handles model with custom stage field configuration" do
       # Configure to use a custom field
-      deal_class.attio_stage_field :pipeline_stage_identifier
+      deal_class.attio_stage_field = :pipeline_stage_identifier
       
       # Simulate custom field
       deal.instance_eval do
@@ -227,7 +227,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable#current_stage_id" do
 
     it "handles model transitioning through stages" do
       # Start with one stage
-      deal_class.attio_stage_field :deal_stage
+      deal_class.attio_stage_field = :deal_stage
       deal.define_singleton_method(:deal_stage) { @stage ||= "prospecting" }
       
       expect(deal.current_stage_id).to eq("prospecting")

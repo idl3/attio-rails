@@ -361,7 +361,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Edge Cases" do
     end
 
     it "sets attio_stage_field" do
-      deal_class.attio_stage_field :custom_stage
+      deal_class.attio_stage_field = :custom_stage
       expect(deal_class.attio_stage_field).to eq(:custom_stage)
     end
   end

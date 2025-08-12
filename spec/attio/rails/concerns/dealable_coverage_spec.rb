@@ -33,7 +33,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Enhancement" do
   describe "#to_attio_deal complete coverage" do
     context "stage_id field mapping" do
       it "uses configured attio_stage_field when present" do
-        deal_class.attio_stage_field :custom_stage
+        deal_class.attio_stage_field = :custom_stage
         deal.define_singleton_method(:custom_stage) { "stage_123" }
         
         data = deal.to_attio_deal
@@ -41,7 +41,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Enhancement" do
       end
 
       it "falls back to stage_id method when no config and stage_id exists" do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         deal.define_singleton_method(:stage_id) { "stage_456" }
         
         data = deal.to_attio_deal
@@ -49,7 +49,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Enhancement" do
       end
 
       it "falls back to status method when no stage_id" do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         deal.define_singleton_method(:status) { "in_progress" }
         
         data = deal.to_attio_deal
@@ -57,7 +57,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Enhancement" do
       end
 
       it "excludes stage_id when no method available" do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         data = deal.to_attio_deal
         expect(data).not_to have_key(:stage_id)
       end
@@ -257,7 +257,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Enhancement" do
           }
         end
         
-        deal_class.attio_stage_field :deal_stage
+        deal_class.attio_stage_field = :deal_stage
         
         deal.define_singleton_method(:deal_stage) { "negotiation" }
         deal.define_singleton_method(:company_ref) { "comp_123" }
@@ -332,28 +332,28 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Coverage Enhancement" do
   describe "lifecycle methods coverage" do
     describe "#current_stage_id" do
       it "returns configured stage field value" do
-        deal_class.attio_stage_field :my_stage
+        deal_class.attio_stage_field = :my_stage
         deal.define_singleton_method(:my_stage) { "stage_value" }
         
         expect(deal.current_stage_id).to eq("stage_value")
       end
 
       it "falls back to stage_id when no configured field" do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         deal.define_singleton_method(:stage_id) { "default_stage" }
         
         expect(deal.current_stage_id).to eq("default_stage")
       end
 
       it "falls back to status when no stage_id" do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         deal.define_singleton_method(:status) { "current_status" }
         
         expect(deal.current_stage_id).to eq("current_status")
       end
 
       it "returns nil when no stage methods available" do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
         expect(deal.current_stage_id).to be_nil
       end
     end

@@ -31,12 +31,12 @@ RSpec.describe "Dealable current_stage_id direct tests" do
         expect(result).to eq("configured_stage")
         
         # Reset for other tests
-        TestDeal.attio_stage_field nil
+        TestDeal.attio_stage_field = nil
       end
 
       it "executes line 314-315: falls back to stage_id" do
         # Ensure no configured field
-        TestDeal.attio_stage_field nil
+        TestDeal.attio_stage_field = nil
         
         # Set stage_id
         deal.stage_id = "fallback_stage_id"
@@ -48,7 +48,7 @@ RSpec.describe "Dealable current_stage_id direct tests" do
 
       it "executes line 316-317: falls back to status" do
         # Ensure no configured field
-        TestDeal.attio_stage_field nil
+        TestDeal.attio_stage_field = nil
         
         # Remove stage_id, add status
         deal.stage_id = nil
@@ -61,7 +61,7 @@ RSpec.describe "Dealable current_stage_id direct tests" do
 
       it "executes line 318: returns nil when no methods available" do
         # Ensure no configured field
-        TestDeal.attio_stage_field nil
+        TestDeal.attio_stage_field = nil
         
         # Remove all stage methods
         deal.stage_id = nil
@@ -98,7 +98,7 @@ RSpec.describe "Dealable current_stage_id direct tests" do
         deal = isolated_class.new
         
         # Branch 1: No configuration, no methods -> nil
-        isolated_class.attio_stage_field nil
+        isolated_class.attio_stage_field = nil
         expect(deal.current_stage_id).to be_nil
         
         # Branch 2: Add status method -> uses status
@@ -110,7 +110,7 @@ RSpec.describe "Dealable current_stage_id direct tests" do
         expect(deal.current_stage_id).to eq("from_stage_id")
         
         # Branch 4: Configure custom field -> uses configured field
-        isolated_class.attio_stage_field :my_field
+        isolated_class.attio_stage_field = :my_field
         deal.define_singleton_method(:my_field) { "from_configured" }
         expect(deal.current_stage_id).to eq("from_configured")
       end
@@ -123,7 +123,7 @@ RSpec.describe "Dealable current_stage_id direct tests" do
         deal = TestDeal.new
         
         # Test 1: With configured field
-        TestDeal.attio_stage_field :test_field
+        TestDeal.attio_stage_field = :test_field
         expect(TestDeal.attio_stage_field).to eq(:test_field)
         expect(TestDeal.attio_stage_field.present?).to be true
         
@@ -133,7 +133,7 @@ RSpec.describe "Dealable current_stage_id direct tests" do
         expect(deal.current_stage_id).to eq("value1")
         
         # Test 2: Without configured field but with stage_id
-        TestDeal.attio_stage_field nil
+        TestDeal.attio_stage_field = nil
         expect(TestDeal.attio_stage_field).to be_nil
         
         deal.stage_id = "value2"
@@ -158,7 +158,7 @@ RSpec.describe "Dealable current_stage_id direct tests" do
 
       it "verifies first condition: attio_stage_field.present? && respond_to?" do
         # Set up both conditions to be true
-        TestDeal.attio_stage_field :verified_field
+        TestDeal.attio_stage_field = :verified_field
         deal.define_singleton_method(:verified_field) { "verified" }
         
         # Both conditions are true
@@ -168,12 +168,12 @@ RSpec.describe "Dealable current_stage_id direct tests" do
         # Should take first branch
         expect(deal.current_stage_id).to eq("verified")
         
-        TestDeal.attio_stage_field nil
+        TestDeal.attio_stage_field = nil
       end
 
       it "verifies elsif respond_to?(:stage_id)" do
         # First condition false, second true
-        TestDeal.attio_stage_field nil
+        TestDeal.attio_stage_field = nil
         deal.stage_id = "stage_value"
         
         # First condition is false
@@ -187,7 +187,7 @@ RSpec.describe "Dealable current_stage_id direct tests" do
 
       it "verifies elsif respond_to?(:status)" do
         # First two conditions false, third true
-        TestDeal.attio_stage_field nil
+        TestDeal.attio_stage_field = nil
         deal.stage_id = nil
         deal.status = "status_value"
         

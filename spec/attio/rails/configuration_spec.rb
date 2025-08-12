@@ -83,7 +83,6 @@ RSpec.describe Attio::Rails::Configuration do
       expect(configuration.background_sync).to be false
     end
   end
-end
 
   describe "nil workspace_id handling" do
     it "handles nil default_workspace_id" do
@@ -92,4 +91,4 @@ end
       expect(config.default_workspace_id).to be_nil
     end
   end
-EOF < /dev/null
+end

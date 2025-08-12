@@ -273,7 +273,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Complete Coverage" do
   describe "current_stage_id method" do
     context "with configured attio_stage_field" do
       it "returns the value from configured field" do
-        deal_class.attio_stage_field :pipeline_stage
+        deal_class.attio_stage_field = :pipeline_stage
         deal.define_singleton_method(:pipeline_stage) { "negotiation" }
         
         expect(deal.current_stage_id).to eq("negotiation")
@@ -282,7 +282,7 @@ RSpec.describe "Attio::Rails::Concerns::Dealable Complete Coverage" do
 
     context "without configured field" do
       before do
-        deal_class.attio_stage_field nil
+        deal_class.attio_stage_field = nil
       end
 
       it "falls back to stage_id method" do
