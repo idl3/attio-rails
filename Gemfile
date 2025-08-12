@@ -20,7 +20,7 @@ group :development, :test do
   gem "rubocop-rspec", "~> 3.6"
   gem "simplecov", "~> 0.22"
   gem "simplecov-console", "~> 0.9"
-  gem "sqlite3", "~> 1.4"
+  gem "sqlite3", "~> 2.7"
   gem "webmock", "~> 3.19"
   gem "yard", "~> 0.9"
 end
