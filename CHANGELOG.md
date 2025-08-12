@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-08-12
+
+### Fixed
+- Handle ArgumentError properly in BulkSync#process_batch - don't catch it in StandardError rescue
+- Add missing class methods in Dealable concern (attio_pipeline_id, track_won_deals, track_lost_deals)
+- Ensure consistent return values in WorkspaceManager methods
+- Fix mock issues in tests - use double instead of instance_double for external classes
+- Fix queue_as test to handle string return values from ActiveJob
+
+### Changed
+- Improved test suite quality by removing 10 redundant coverage-padding test files
+- Reduced test count from 578 to 322 while maintaining meaningful coverage
+- Improved code coverage from 94.76% to 95.16% with targeted, high-quality tests
+
+### Added
+- Comprehensive tests for deal value calculation fallbacks
+- Tests for stage field resolution chain
+- Tests for callback execution with error handling
+- Tests for batch operation failures in WorkspaceManager
+- Documentation for uncovered code paths with business impact analysis
+
 ## [0.2.0] - 2025-01-11
 
 ### Added
