@@ -37,9 +37,10 @@ module Attio
       end
 
       def invite_member(email:, role: "member", sync_with_user: nil)
-        return unless @client.respond_to?(:workspace_members)
+        return { success: false, error: "Client doesn't support workspace members" } unless @client.respond_to?(:workspace_members)
 
-        result = @client.workspace_members.invite(email: email, role: role)
+        api_result = @client.workspace_members.invite(email: email, role: role)
+        result = { success: true, member_id: api_result["id"], data: api_result }
 
         if sync_with_user && result[:success] && sync_with_user.respond_to?(:attio_member_id=)
           sync_with_user.update(attio_member_id: result[:member_id])
@@ -52,9 +53,10 @@ module Attio
       end
 
       def update_member_role(member_id:, role:)
-        return unless @client.respond_to?(:workspace_members)
+        return { success: false, error: "Client doesn't support workspace members" } unless @client.respond_to?(:workspace_members)
 
-        @client.workspace_members.update(member_id: member_id, data: { role: role })
+        result = @client.workspace_members.update(member_id: member_id, data: { role: role })
+        { success: true, data: result }
       rescue StandardError => e
         @logger.error("Failed to update member role: #{e.message}")
         { success: false, error: e.message }
