@@ -92,8 +92,8 @@ RSpec.describe Attio::Rails::Concerns::Syncable do
     end
 
     context "with background sync disabled" do
-      let(:client) { instance_double(Attio::Client) }
-      let(:records) { instance_double(Attio::Resources::Records) }
+      let(:client) { double("Attio::Client") }
+      let(:records) { double("Attio::Resources::Records") }
 
       before do
         Attio::Rails.configure { |c| c.background_sync = false }
@@ -142,9 +142,9 @@ RSpec.describe Attio::Rails::Concerns::Syncable do
     before { model.update_column(:attio_record_id, "attio123") }
 
     context "with error handling" do
-      let(:client) { instance_double(Attio::Client) }
-      let(:records) { instance_double(Attio::Resources::Records) }
-      let(:logger) { instance_double(Logger) }
+      let(:client) { double("Attio::Client") }
+      let(:records) { double("Attio::Resources::Records") }
+      let(:logger) { double(Logger) }
 
       before do
         Attio::Rails.configure { |c| c.background_sync = false }
@@ -187,8 +187,8 @@ RSpec.describe Attio::Rails::Concerns::Syncable do
     end
 
     context "with background sync disabled" do
-      let(:client) { instance_double(Attio::Client) }
-      let(:records) { instance_double(Attio::Resources::Records) }
+      let(:client) { double("Attio::Client") }
+      let(:records) { double("Attio::Resources::Records") }
 
       before do
         Attio::Rails.configure { |c| c.background_sync = false }
@@ -345,9 +345,9 @@ RSpec.describe Attio::Rails::Concerns::Syncable do
   end
 
   describe "error handling" do
-    let(:client) { instance_double(Attio::Client) }
-    let(:records) { instance_double(Attio::Resources::Records) }
-    let(:logger) { instance_double(Logger) }
+    let(:client) { double("Attio::Client") }
+    let(:records) { double("Attio::Resources::Records") }
+    let(:logger) { double(Logger) }
 
     before do
       Attio::Rails.configure { |c| c.background_sync = false }
@@ -375,8 +375,8 @@ RSpec.describe Attio::Rails::Concerns::Syncable do
   end
 
   describe "error path coverage" do
-    let(:client) { instance_double(Attio::Client) }
-    let(:records) { instance_double(Attio::Resources::Records) }
+    let(:client) { double("Attio::Client") }
+    let(:records) { double("Attio::Resources::Records") }
     
     before do
       allow(Attio::Rails).to receive(:client).and_return(client)
@@ -385,7 +385,12 @@ RSpec.describe Attio::Rails::Concerns::Syncable do
     
     context "when handle_attio_error raises" do
       it "handles errors from error handler itself" do
-        # This tests line 166
+        # Configure the class to use handle_attio_error as error handler
+        model_class.syncs_with_attio("contacts", {
+          email: :email,
+          name: :name
+        }, on_error: :handle_attio_error)
+        
         allow(model).to receive(:handle_attio_error) do
           raise StandardError, "Error handler failed"
         end

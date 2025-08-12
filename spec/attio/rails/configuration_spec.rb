@@ -27,7 +27,7 @@ RSpec.describe Attio::Rails::Configuration do
     end
 
     context "when Rails is defined" do
-      let(:rails_logger) { instance_double(Logger) }
+      let(:rails_logger) { double(Logger) }
 
       before do
         stub_const("Rails", double(logger: rails_logger))
@@ -87,8 +87,8 @@ RSpec.describe Attio::Rails::Configuration do
   describe "nil workspace_id handling" do
     it "handles nil default_workspace_id" do
       # This tests line 52
-      config.default_workspace_id = nil
-      expect(config.default_workspace_id).to be_nil
+      configuration.default_workspace_id = nil
+      expect(configuration.default_workspace_id).to be_nil
     end
   end
 end

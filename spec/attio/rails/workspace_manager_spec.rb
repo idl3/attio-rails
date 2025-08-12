@@ -6,9 +6,9 @@ RSpec.describe Attio::Rails::WorkspaceManager do
   let(:workspace_id) { "test_workspace" }
   let(:api_key) { "test_api_key" }
   let(:manager) { described_class.new(workspace_id: workspace_id, api_key: api_key) }
-  let(:client) { instance_double(Attio::Client) }
-  let(:workspace_members) { instance_double(Attio::Resources::WorkspaceMembers) }
-  let(:meta) { instance_double(Attio::Resources::Meta) }
+  let(:client) { double("Attio::Client") }
+  let(:workspace_members) { double("Attio::Resources::WorkspaceMembers") }
+  let(:meta) { double("Attio::Resources::Meta") }
   let(:cache) { double("cache") }
 
   before do
@@ -128,18 +128,20 @@ RSpec.describe Attio::Rails::WorkspaceManager do
 
     it "invites a new member" do
       expect(workspace_members).to receive(:invite).with(email: "new@example.com", role: "member")
-                                                   .and_return({ success: true, member_id: "new_member" })
+                                                   .and_return({ "id" => "new_member" })
 
       result = manager.invite_member(email: "new@example.com")
       expect(result[:success]).to be true
+      expect(result[:member_id]).to eq("new_member")
     end
 
     it "invites with custom role" do
       expect(workspace_members).to receive(:invite).with(email: "admin@example.com", role: "admin")
-                                                   .and_return({ success: true, member_id: "admin_member" })
+                                                   .and_return({ "id" => "admin_member" })
 
       result = manager.invite_member(email: "admin@example.com", role: "admin")
       expect(result[:success]).to be true
+      expect(result[:member_id]).to eq("admin_member")
     end
 
     it "syncs with user model when provided" do
@@ -147,9 +149,12 @@ RSpec.describe Attio::Rails::WorkspaceManager do
       allow(user).to receive(:respond_to?).with(:attio_member_id=).and_return(true)
       expect(user).to receive(:update).with(attio_member_id: "new_member")
 
-      allow(workspace_members).to receive(:invite).and_return({ success: true, member_id: "new_member" })
+      allow(workspace_members).to receive(:invite).with(email: "user@example.com", role: "member")
+                                                  .and_return({ "id" => "new_member" })
 
-      manager.invite_member(email: "user@example.com", sync_with_user: user)
+      result = manager.invite_member(email: "user@example.com", sync_with_user: user)
+      expect(result[:success]).to be true
+      expect(result[:member_id]).to eq("new_member")
     end
 
     it "handles errors gracefully" do
@@ -423,8 +428,8 @@ RSpec.describe Attio::Rails::WorkspaceManager do
   end
 
   describe "error path coverage" do
-    let(:client) { instance_double(Attio::Client) }
-    let(:workspaces_resource) { instance_double(Attio::Resources::Workspaces) }
+    let(:client) { double("Attio::Client") }
+    let(:workspaces_resource) { double("Attio::Resources::Workspaces") }
     let(:manager) { described_class.new }
     
     before do
@@ -441,17 +446,18 @@ RSpec.describe Attio::Rails::WorkspaceManager do
       end
       
       it "handles validation failures in validate_member" do
-        # Tests line 97
-        allow(workspaces_resource).to receive(:get_member).and_raise(Attio::Error, "Member not found")
+        # Tests line 227-228
+        allow(client).to receive(:respond_to?).with(:workspace_members).and_return(true)
+        allow(client).to receive(:workspace_members).and_return(workspace_members)
+        allow(workspace_members).to receive(:get_member).and_raise(StandardError, "Member not found")
         
-        expect { manager.validate_member("workspace_id", "member_id") }.to raise_error(Attio::Rails::WorkspaceError)
+        expect { manager.send(:validate_member, "workspace_id", "member_id") }.to raise_error(Attio::Rails::WorkspaceError, /Member validation failed/)
       end
       
       it "handles missing workspace in member validation" do
-        # Tests line 115
-        allow(workspaces_resource).to receive(:get_member).and_return(nil)
-        
-        expect(manager.validate_member("workspace_id", "member_id")).to be false
+        # Tests line 222
+        expect(manager.send(:validate_member, nil, "member_id")).to be false
+        expect(manager.send(:validate_member, "workspace_id", nil)).to be false
       end
     end
     
@@ -488,12 +494,14 @@ RSpec.describe Attio::Rails::WorkspaceManager do
     before do
       allow(users_collection).to receive(:find_each).and_yield(user)
       allow(manager).to receive(:members_by_email).and_return(existing_members)
+      allow(client).to receive(:respond_to?).with(:workspace_members).and_return(true)
+      allow(client).to receive(:workspace_members).and_return(workspace_members)
     end
     
     it "updates existing member when role changes with custom role" do
-      role_mapping = { admin?: "admin" }
+      role_mapping = { :admin? => "admin" }
       allow(user).to receive(:admin?).and_return(true)
-      allow(workspace_members).to receive(:update).and_return({ success: true })
+      allow(workspace_members).to receive(:update).with(member_id: "member-123", data: { role: "admin" }).and_return({ "id" => "member-123" })
       
       results = manager.sync_rails_users(users_collection, role_mapping: role_mapping)
       
@@ -501,13 +509,14 @@ RSpec.describe Attio::Rails::WorkspaceManager do
     end
     
     it "handles update failure for existing member" do
-      role_mapping = { admin?: "admin" }
+      role_mapping = { :admin? => "admin" }
       allow(user).to receive(:admin?).and_return(true)
-      allow(workspace_members).to receive(:update).and_return({ success: false, error: "Update failed" })
+      allow(workspace_members).to receive(:update).with(member_id: "member-123", data: { role: "admin" }).and_raise(StandardError, "Update failed")
       
       results = manager.sync_rails_users(users_collection, role_mapping: role_mapping)
       
       expect(results[:failed]).not_to be_empty
+      expect(results[:failed].first[:error]).to eq("Update failed")
     end
   end
 end

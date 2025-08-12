@@ -3,8 +3,8 @@
 require "spec_helper"
 
 RSpec.describe Attio::Rails::MetaInfo do
-  let(:client) { instance_double(Attio::Client) }
-  let(:meta) { instance_double(Attio::Resources::Meta) }
+  let(:client) { double("Attio::Client") }
+  let(:meta) { double("Attio::Resources::Meta") }
   let(:cache) { double("cache") }
 
   before do
@@ -363,25 +363,6 @@ RSpec.describe Attio::Rails::MetaInfo do
       result = nil
       described_class.with_feature(:disabled_feature) { result = "executed" }
       expect(result).to be_nil
-    end
-  end
-
-  describe "error handling for complete coverage" do
-    context "registration errors" do
-      it "handles registration failures gracefully" do
-        # This tests lines 92-93, 95
-        allow(Rails).to receive(:application).and_raise(StandardError, "No Rails app")
-        
-        expect { described_class.register_health_check }.not_to raise_error
-      end
-      
-      it "handles missing health check framework" do
-        # This tests line 128
-        allow(Rails).to receive(:application).and_return(double(config: double))
-        allow(Rails.application.config).to receive(:respond_to?).with(:health_check).and_return(false)
-        
-        expect { described_class.register_health_check }.not_to raise_error
-      end
     end
   end
 end

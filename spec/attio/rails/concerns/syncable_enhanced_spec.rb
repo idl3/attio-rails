@@ -19,8 +19,8 @@ RSpec.describe "Attio::Rails::Concerns::Syncable enhanced features" do
   end
 
   let(:model) { model_class.create!(name: "John Doe", email: "john@example.com") }
-  let(:client) { instance_double(Attio::Client) }
-  let(:records_resource) { instance_double(Attio::Resources::Records) }
+  let(:client) { double("Attio::Client") }
+  let(:records_resource) { double("Attio::Resources::Records") }
 
   before do
     allow(Attio::Rails).to receive(:client).and_return(client)

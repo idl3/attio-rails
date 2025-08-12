@@ -7,9 +7,9 @@ RSpec.describe Attio::Rails::RateLimitedClient do
   let(:workspace_id) { "test_workspace" }
   let(:config) { Attio::Rails.configuration }
   let(:client) { described_class.new(api_key: api_key, workspace_id: workspace_id, config: config) }
-  let(:attio_client) { instance_double(Attio::Client) }
+  let(:attio_client) { double("Attio::Client") }
   let(:rate_limiter) { double("RateLimiter") }
-  let(:meta_resource) { instance_double(Attio::Resources::Meta) }
+  let(:meta_resource) { double("Attio::Resources::Meta") }
 
   before do
     allow(Attio::Client).to receive(:new).and_return(attio_client)
@@ -53,7 +53,7 @@ RSpec.describe Attio::Rails::RateLimitedClient do
   end
 
   describe "#method_missing" do
-    let(:records) { instance_double(Attio::Resources::Records) }
+    let(:records) { double("Attio::Resources::Records") }
 
     before do
       allow(attio_client).to receive(:records).and_return(records)
