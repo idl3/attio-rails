@@ -14,7 +14,7 @@ group :development, :test do
   gem "rails", "~> 7.0"
   gem "redcarpet", "~> 3.5"
   gem "rspec", "~> 3.13"
-  gem "rspec-rails", "~> 6.0"
+  gem "rspec-rails", "~> 8.0"
   gem "rubocop", "~> 1.50"
   gem "rubocop-rails", "~> 2.19"
   gem "rubocop-rspec", "~> 3.6"
