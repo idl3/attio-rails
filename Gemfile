@@ -11,7 +11,7 @@ group :development, :test do
   gem "bundler-audit", "~> 0.9"
   gem "danger", "~> 9.4"
   gem "pry", "~> 0.14"
-  gem "rails", "~> 7.0"
+  gem "rails", "~> 8.0"
   gem "redcarpet", "~> 3.5"
   gem "rspec", "~> 3.13"
   gem "rspec-rails", "~> 6.0"
